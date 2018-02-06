@@ -88,9 +88,11 @@ class DAOChallenger(object):
         try:
             dao_headers = self.deferred.get(block=True, timeout=self.request_timeout)
             log.debug("received DAO challenge answer", proto=self.proto, answer=dao_headers)
-            result = len(dao_headers) == 1 and \
+            # Accept peers without DAO header
+            result = len(dao_headers) == 0 or (
                     dao_headers[0].hash == self.config['DAO_FORK_BLKHASH'] and \
                     dao_headers[0].extra_data == self.config['DAO_FORK_BLKEXTRA']
+            )
             self.chainservice.on_dao_challenge_answer(self.proto, result)
         except gevent.Timeout:
             log.debug('challenge dao timed out', proto=self.proto)
