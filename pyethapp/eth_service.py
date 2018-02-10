@@ -465,7 +465,7 @@ class ChainService(WiredService):
                             origin_hash = blockhash
                         else:
                             unknown = True
-                    except KeyError:
+                    except (KeyError, IndexError):
                         unknown = True
             else:  # number traversal
                 if reverse:
