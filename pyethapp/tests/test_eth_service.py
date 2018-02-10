@@ -245,3 +245,13 @@ def test_query_headers(test_app):
     assert len(headers) == 5
     assert headers[0].number == 10
     assert headers[-1].number == 14
+
+    # case 5: query single block from head
+    headers = chainservice.query_headers(
+        1,
+        1,
+        0,
+        False,
+        origin_hash=test_chain.chain.head.hash
+    )
+    assert len(headers) == 1
