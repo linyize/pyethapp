@@ -6,7 +6,7 @@ import gevent
 import gipc
 import random
 from devp2p.service import BaseService
-from ethereum.pow.ethpow import mine, TT64M1
+from ethereum.pow.ethpow import mine_lowcost, TT64M1
 from ethereum.slogging import get_logger
 from ethereum.utils import encode_hex
 log = get_logger('pow')
@@ -34,8 +34,9 @@ class Miner(gevent.Greenlet):
         while not self.is_stopped:
             log_sub.trace('starting mining round')
             st = time.time()
-            bin_nonce, mixhash = mine(self.block_number, self.difficulty, self.mining_hash,
+            bin_nonce, mixhash = mine_lowcost(self.block_number, self.difficulty, self.mining_hash,
                                       start_nonce=nonce, rounds=self.rounds)
+            gevent.sleep(1) # sleep for 1s
             elapsed = time.time() - st
             if bin_nonce:
                 log_sub.info('nonce found')
