@@ -177,7 +177,6 @@ def make_transaction(key, nonce, value, to):
     tx.sign(key)
     return tx
 
-
 def test_query_headers(test_app):
     test_chain = tester.Chain()
     test_chain.mine(30)
@@ -255,3 +254,19 @@ def test_query_headers(test_app):
         origin_hash=test_chain.chain.head.hash
     )
     assert len(headers) == 1
+
+def test_receive_getblockheaders(test_app):
+    test_chain = tester.Chain()
+    test_chain.mine(30)
+    eth = test_app.chain
+    eth.chain = test_chain.chain
+
+    proto = eth_protocol.ETHProtocol(PeerMock(test_app), eth)
+
+    # case 1: known block number
+    block_number = test_chain.chain.head.number - 5
+    eth.on_receive_getblockheaders(proto, hash_or_number=(None, block_number), block=None, amount=192, skip=0, reverse=False)
+
+    # case 2: unknown block number
+    unknown_block_number = test_chain.chain.head.number + 100
+    eth.on_receive_getblockheaders(proto, hash_or_number=(None, unknown_block_number), block=None, amount=192, skip=0, reverse=False)
