@@ -45,7 +45,8 @@ logger = log = slogging.get_logger('jsonrpc')
 
 # defaults
 default_startgas = 500 * 1000
-default_gasprice = 60 * denoms.shannon
+#default_gasprice = 60 * denoms.shannon
+default_gasprice = 1 * denoms.shannon
 
 
 def _fail_on_error_dispatch(self, request):
