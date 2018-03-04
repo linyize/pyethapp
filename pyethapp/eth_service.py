@@ -155,7 +155,8 @@ class ChainService(WiredService):
         self._head_candidate_needs_updating = True
         # Initialize a new head candidate.
         _ = self.head_candidate
-        self.min_gasprice = 100 * 10**9 # TODO: better be an option to validator service?
+        #self.min_gasprice = 100 * 10**9 # TODO: better be an option to validator service?
+        self.min_gasprice = 10**9
         self.add_blocks_lock = False
         self.add_transaction_lock = gevent.lock.Semaphore()
         self.broadcast_filter = DuplicatesFilter()
