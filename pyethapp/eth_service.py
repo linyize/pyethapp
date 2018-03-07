@@ -380,7 +380,7 @@ class ChainService(WiredService):
         if self.broadcast_filter.update(tx.hash):
             log.debug('broadcasting tx', origin=origin)
             bcast = self.app.services.peermanager.broadcast
-            bcast(eth_protocol.ETHProtocol, 'transactions', args=(tx,),
+            bcast(eth_protocol.ETHProtocol, 'transactions', args=[tx],
                   exclude_peers=[origin.peer] if origin else [])
         else:
             log.debug('already broadcasted tx')
@@ -502,7 +502,10 @@ class ChainService(WiredService):
         transactions = self.transaction_queue.peek()
         if transactions:
             log.debug("sending transactions", remote_id=proto)
-            proto.send_transactions(*transactions)
+            txs = []
+            for tx in transactions:
+                txs.append(tx.tx)
+            proto.send_transactions(*txs)
 
     # transactions
 
