@@ -1671,7 +1671,7 @@ class FilterManager(Subdispatcher):
     def getTransactionReceipt(self, tx_hash):
         try:
             tx, block, index = self.chain.chain.get_transaction(tx_hash)
-        except KeyError:
+        except (KeyError, TypeError):
             return None
         if block not in self.chain.chain:
             return None
