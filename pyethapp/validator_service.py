@@ -86,8 +86,10 @@ class ValidatorService(BaseService):
             return
         # (2) Check if the validator is logged in
         if not self.is_logged_in(casper, casper.get_current_epoch(), validator_index):
-            # The validator isn't logged in, so return!
+            log.debug('The validator is not logged in')
             return
+
+        self.log_validator_info(casper)
         # The validator is logged in, check if we should start start voting or a logout sequence
         if self.should_logout:
             log.info('Changing validator state to log out')
@@ -98,7 +100,7 @@ class ValidatorService(BaseService):
 
     def check_valcode(self, casper):
         if not self.chain.state.get_code(self.valcode_addr):
-            # Valcode still not deployed!
+            log.debug('Valcode still not deployed!')
             return
         # Make sure we have enough ETH to deposit
         if self.chain.state.get_balance(self.coinbase.address) < self.deposit_size:
@@ -129,12 +131,14 @@ class ValidatorService(BaseService):
         epoch = self.chain.state.block_number // self.epoch_length
         # NO_DBL_VOTE: Don't vote if we have already
         if epoch in self.votes:
+            log.debug('No vote: [NO_DBL_VOTE]', epoch=epoch, votes=self.votes.keys())
             return False
         validator_index = self.get_validator_index(casper)
         # Make sure we are logged in
         if not self.is_logged_in(casper, epoch, validator_index):
             raise Exception('Cannot vote: Validator not logged in!')
         if self.chain.state.block_number % self.epoch_length <= self.epoch_length / 4:
+            log.debug('Wait until a quarter of epoch')
             return False
         # Get the ancestry hash and source ancestry hash
         target_hash, epoch, source_epoch = self.recommended_vote_contents(casper, validator_index)
@@ -142,6 +146,7 @@ class ValidatorService(BaseService):
             return False
         # Prevent NO_SURROUND slash
         if epoch < self.latest_target_epoch or source_epoch < self.latest_source_epoch:
+            log.debug('No vote: [NO_SURROUND]')
             return False
         vote_msg = casper_utils.mk_vote(validator_index, target_hash, epoch,
                                         source_epoch, self.coinbase.privkey)
@@ -197,6 +202,22 @@ class ValidatorService(BaseService):
                   last_finalized_epoch, last_justified_epoch, ese,
                   last_nonvoter_rescale, last_voter_rescale
                   ))
+
+    def log_validator_info(self, casper):
+        validator_index = casper.get_validator_index()
+        address = casper.get_validator_address()
+        deposit_unscaled = casper.get_validator_deposit()
+        ce = casper.get_current_epoch()
+        deposit_scaled = deposit_unscaled * casper.get_deposit_scale_factor(ce)
+        start_dynasty = casper.get_validator_start_dynasty()
+        end_dynasty = casper.get_validator_end_dynasty()
+        withdrawal_addr = casper.get_validator_withdrawal_addr()
+        log.info('Validator Status:', index=validator_index, address=address,
+            deposit_unscaled=deposit_unscaled,
+            deposit_scaled=deposit_scaled,
+            start_dynasty=start_dynasty,
+            end_dynasty=end_dynasty,
+            withdrawal_addr=withdrawal_addr)
 
     def set_current_state(self, validator_state):
         log.info('Changing validator state to: {}'.format(validator_state))
