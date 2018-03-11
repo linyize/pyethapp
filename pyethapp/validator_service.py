@@ -78,11 +78,11 @@ class ValidatorService(BaseService):
         validator_index = self.get_validator_index(casper)
         # (1) Check if the validator has ever deposited funds
         if not validator_index and self.deposit_size:
-            # The validator hasn't deposited funds but deposit flag is set, so deposit!
+            log.debug('The validator hasn\'t deposited funds but deposit flag is set, so deposit!')
             self.broadcast_valcode_tx()
             self.set_current_state(ValidatorState.waiting_for_valcode)
         elif not validator_index:
-            # The validator hasn't deposited funds and we have no intention to, so return!
+            log.debug('The validator hasn\'t deposited funds and we have no intention to, so return!')
             return
         # (2) Check if the validator is logged in
         if not self.is_logged_in(casper, casper.get_current_epoch(), validator_index):
