@@ -789,7 +789,7 @@ class Miner(Subdispatcher):
     @public
     @encode_res(quantity_encoder)
     def gasPrice(self):
-        return 1  # FIXME (check latest txs)
+        return 10**9 # 1 gwei
 
     @public
     def accounts(self):
