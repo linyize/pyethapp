@@ -256,7 +256,7 @@ class ValidatorService(BaseService):
         self.chainservice.broadcast_transaction(logout_tx)
 
     def mk_transaction(self, to=b'\x00' * 20, value=0, data=b'',
-                       gasprice=110*10**9, startgas=tester.STARTGAS, nonce=None, signed=True):
+                       gasprice=110*10**9, startgas=2500000, nonce=None, signed=True):
         if nonce is None:
             nonce = self.chain.state.get_nonce(self.coinbase.address)
         tx = transactions.Transaction(nonce, gasprice, startgas, to, value, data)
