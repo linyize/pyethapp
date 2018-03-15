@@ -204,17 +204,17 @@ class ValidatorService(BaseService):
                   ))
 
     def log_validator_info(self, casper):
-        validator_index = casper.get_validator_index()
-        address = casper.get_validator_address()
-        deposit_unscaled = casper.get_validator_deposit()
+        index = self.get_validator_index(casper)
+        address = casper.get_validators__addr(index)
+        deposit_unscaled = casper.get_validators__deposit(index)
         ce = casper.get_current_epoch()
         deposit_scaled = deposit_unscaled * casper.get_deposit_scale_factor(ce)
-        start_dynasty = casper.get_validator_start_dynasty()
-        end_dynasty = casper.get_validator_end_dynasty()
-        withdrawal_addr = casper.get_validator_withdrawal_addr()
-        log.info('Validator Status:', index=validator_index, address=address,
-            deposit_unscaled=deposit_unscaled,
-            deposit_scaled=deposit_scaled,
+        start_dynasty = casper.get_validators__start_dynasty(index)
+        end_dynasty = casper.get_validators__end_dynasty(index)
+        withdrawal_addr = casper.get_validators__withdrawal_addr(index)
+        log.info('Validator Status:', index=index, address=address,
+            deposit_unscaled=deposit_unscaled / 10**18,
+            deposit_scaled=deposit_scaled / 10**18,
             start_dynasty=start_dynasty,
             end_dynasty=end_dynasty,
             withdrawal_addr=withdrawal_addr)
