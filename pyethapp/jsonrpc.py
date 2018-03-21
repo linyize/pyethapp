@@ -1687,7 +1687,7 @@ class FilterManager(Subdispatcher):
         if index == 0:
             response['gasUsed'] = quantity_encoder(receipt.gas_used)
         else:
-            prev_receipt = temp_state.receipts[index - 1]
+            prev_receipt = self.chain.get_receipts(block)[index - 1]
             assert prev_receipt.gas_used < receipt.gas_used
             response['gasUsed'] = quantity_encoder(receipt.gas_used - prev_receipt.gas_used)
 
