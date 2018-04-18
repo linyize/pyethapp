@@ -186,8 +186,8 @@ class ValidatorService(BaseService):
     def log_casper_info(self, casper):
         ce = casper.current_epoch()
         ese = casper.expected_source_epoch()
-        cur_deposits = casper.get_total_curdyn_deposits()
-        prev_deposits = casper.get_total_prevdyn_deposits()
+        cur_deposits = casper.total_curdyn_deposits_scaled()
+        prev_deposits = casper.total_prevdyn_deposits_scaled()
         cur_votes = casper.votes__cur_dyn_votes(ce, ese) * casper.deposit_scale_factor(ce)
         prev_votes = casper.votes__prev_dyn_votes(ce, ese) * casper.deposit_scale_factor(ce)
         cur_vote_pct = cur_votes * 100 / cur_deposits if cur_deposits else 0
