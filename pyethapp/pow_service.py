@@ -41,6 +41,10 @@ class Miner(gevent.Greenlet):
             if bin_nonce:
                 log_sub.info('nonce found')
                 self.nonce_callback(bin_nonce, mixhash, self.mining_hash)
+
+                # 随机10-40秒出块
+                sec = random.randint(10, 40)
+                gevent.sleep(sec)
                 break
             delay = elapsed * (1 - old_div(self.cpu_pct, 100.))
             hashrate = int(self.rounds // (elapsed + delay))
