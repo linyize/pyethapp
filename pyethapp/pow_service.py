@@ -42,8 +42,8 @@ class Miner(gevent.Greenlet):
                 log_sub.info('nonce found')
                 self.nonce_callback(bin_nonce, mixhash, self.mining_hash)
 
-                # 随机10-40秒出块
-                sec = random.randint(10, 40)
+                # 随机8-24秒出块
+                sec = random.randint(8, 24)
                 gevent.sleep(sec)
                 break
             delay = elapsed * (1 - old_div(self.cpu_pct, 100.))
