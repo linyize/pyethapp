@@ -39,7 +39,7 @@ class Miner(gevent.Greenlet):
             gevent.sleep(0.003)
             elapsed = time.time() - st
             if bin_nonce:
-                log_sub.info('nonce found')
+                #log_sub.info('nonce found')
                 self.nonce_callback(bin_nonce, mixhash, self.mining_hash)
 
                 # 随机5秒-20秒出一个块
@@ -75,12 +75,12 @@ class PoWWorker(object):
         self.cpu_pct = cpu_pct
 
     def send_found_nonce(self, bin_nonce, mixhash, mining_hash):
-        log_sub.info('sending nonce')
+        #log_sub.info('sending nonce')
         self.cpipe.put(('found_nonce', dict(bin_nonce=bin_nonce, mixhash=mixhash,
                                             mining_hash=mining_hash)))
 
     def send_hashrate(self, hashrate):
-        log_sub.trace('sending hashrate')
+        #log_sub.trace('sending hashrate')
         self.cpipe.put(('hashrate', dict(hashrate=hashrate)))
 
     def recv_set_cpu_pct(self, cpu_pct):
@@ -155,12 +155,13 @@ class PoWService(BaseService):
         self.hashrate = hashrate
 
     def recv_found_nonce(self, bin_nonce, mixhash, mining_hash):
-        log.info('nonce found: {}'.format(encode_hex(mining_hash)))
+        #log.info('nonce found: {}'.format(encode_hex(mining_hash)))
         block = self.chain.head_candidate
         if block.mining_hash != mining_hash:
-            log.warn('mining_hash does not match')
+            #log.warn('mining_hash does not match')
             gevent.spawn_later(0.5, self.mine_head_candidate)
             return False
+        log.info('nonce found: {}'.format(encode_hex(mining_hash)))
         block.header.mixhash = mixhash
         block.header.nonce = bin_nonce
         if self.chain.add_mined_block(block):
