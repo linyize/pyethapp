@@ -168,15 +168,15 @@ class PoWService(BaseService):
             log.debug('mined block %d (%s) added to chain' % (
                 block.number, encode_hex(block.hash[:8])))
 
-            # 5秒后继续挖矿 linyize 2018.04.24
+            # 出块成功：5秒后继续挖矿 linyize 2018.04.24
             gevent.spawn_later(5, self.mine_head_candidate)
             return True
         else:
             log.debug('failed to add mined block %d (%s) to chain' % (
                 block.number, encode_hex(block.hash[:8])))
 
-            # 1小时后再重新挖矿 linyize 2018.04.11
-            gevent.spawn_later(3600, self.mine_head_candidate)
+            # 识别：15秒后继续挖矿 linyize 2018.04.24
+            gevent.spawn_later(15, self.mine_head_candidate)
             return False
 
     def _run(self):
