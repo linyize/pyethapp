@@ -36,6 +36,7 @@ class Miner(gevent.Greenlet):
             st = time.time()
             bin_nonce, mixhash = mine_lowcost(self.block_number, self.difficulty, self.mining_hash,
                                       start_nonce=nonce, rounds=self.rounds)
+            gevent.sleep(0.003)
             elapsed = time.time() - st
             if bin_nonce:
                 log_sub.info('nonce found')
