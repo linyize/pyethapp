@@ -130,7 +130,6 @@ class PoWService(BaseService):
         self.chain = app.services.chain
         self.chain.on_new_head_cbs.append(self.on_new_head)
         self.hashrate = 0
-        self.waitForMine = False
         self.lastBlockTime = 0
         gevent.spawn_later(self.mine_period, self.on_mine)
 
