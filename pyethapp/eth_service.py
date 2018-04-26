@@ -238,9 +238,6 @@ class ChainService(WiredService):
             self.broadcast_transaction(tx, origin=origin)  # asap
         except InvalidTransaction as e:
             log.debug('invalid tx', error=e)
-
-            # 从队列删除错误的交易 linyize 2018.4.11
-            self.transaction_queue = self.transaction_queue.diff([tx])
             return
 
         log.info('is mining?', mining=self.is_mining)
@@ -273,7 +270,7 @@ class ChainService(WiredService):
     def add_mined_block(self, block):
         log.debug('adding mined block', block=block)
         assert isinstance(block, Block)
-        if self.chain.add_block(block):
+        if self.chain.add_block(block, isMine=True):
             log.debug('added', block=block, ts=time.time())
             assert block == self.chain.head
             self.transaction_queue = self.transaction_queue.diff(block.transactions)
