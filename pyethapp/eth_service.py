@@ -95,6 +95,7 @@ class ChainService(WiredService):
     processed_gas = 0
     processed_elapsed = 0
     process_time_queue_period = 5
+    tx_queue_period = 60
 
     def __init__(self, app):
         self.config = app.config
@@ -163,6 +164,7 @@ class ChainService(WiredService):
         self.on_new_head_cbs = []
         self.newblock_processing_times = deque(maxlen=1000)
         gevent.spawn_later(self.process_time_queue_period, self.process_time_queue)
+        gevent.spawn_later(self.tx_queue_period, self.process_tx_queue)
 
     @property
     def is_syncing(self):
@@ -183,6 +185,11 @@ class ChainService(WiredService):
             log.info(str(e))
         finally:
             gevent.spawn_later(self.process_time_queue_period, self.process_time_queue)
+
+    def process_tx_queue(self):
+        # 清空交易队列
+        self.transaction_queue = TransactionQueue()
+        self.broadcast_filter = DuplicatesFilter()
 
     # TODO: Move to pyethereum
     def get_receipts(self, block):
