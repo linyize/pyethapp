@@ -36,15 +36,11 @@ class Miner(gevent.Greenlet):
             st = time.time()
             bin_nonce, mixhash = mine_lowcost(self.block_number, self.difficulty, self.mining_hash,
                                       start_nonce=nonce, rounds=self.rounds)
-            gevent.sleep(0.003)
+            gevent.sleep(0.5)
             elapsed = time.time() - st
             if bin_nonce:
-                #log_sub.info('nonce found')
+                log_sub.info('nonce found')
                 self.nonce_callback(bin_nonce, mixhash, self.mining_hash)
-
-                # 随机5秒-20秒出一个块
-                sec = random.randint(5, 20)
-                gevent.sleep(sec)
                 break
             delay = elapsed * (1 - old_div(self.cpu_pct, 100.))
             hashrate = int(self.rounds // (elapsed + delay))
@@ -123,6 +119,8 @@ class PoWService(BaseService):
         mine_empty_blocks=True
     ))
 
+    mine_period = 5
+
     def __init__(self, app):
         super(PoWService, self).__init__(app)
         cpu_pct = self.app.config['pow']['cpu_pct']
@@ -130,16 +128,35 @@ class PoWService(BaseService):
         self.worker_process = gipc.start_process(
             target=powworker_process, args=(self.cpipe, cpu_pct))
         self.chain = app.services.chain
-        self.chain.on_new_head_cbs.append(self.mine_head_candidate)
+        self.chain.on_new_head_cbs.append(self.on_new_head)
         self.hashrate = 0
+        self.waitForMine = False
+        self.lastBlockTime = 0
+        gevent.spawn_later(self.mine_period, self.on_mine)
 
     @property
     def active(self):
         return self.app.config['pow']['activated']
 
+    def on_new_head(self, _=None):
+        log.debug('on_new_head')
+        self.lastBlockTime = time.time()
+
+    def on_mine(self, _=None):
+        log.debug('on_mine', time=time.time())
+
+        now = time.time()
+        sec = random.randint(10, 40)
+        if now - self.lastBlockTime > sec: # 收到新块通知后，延迟10-40秒出块
+            gevent.spawn_later(0.5, self.mine_head_candidate)
+
+        gevent.spawn_later(self.mine_period, self.on_mine)
+
     def mine_head_candidate(self, _=None):
+        log.debug('mine_head_candidate start!!!')
         hc = self.chain.head_candidate
         if not self.active or self.chain.is_syncing:
+            log.debug('mine_head_candidate is_syncing!!!')
             return
         elif (hc.transaction_count == 0 and
               not self.app.config['pow']['mine_empty_blocks']):
@@ -155,28 +172,22 @@ class PoWService(BaseService):
         self.hashrate = hashrate
 
     def recv_found_nonce(self, bin_nonce, mixhash, mining_hash):
-        #log.info('nonce found: {}'.format(encode_hex(mining_hash)))
+        log.info('nonce found: {}'.format(encode_hex(mining_hash)))
         block = self.chain.head_candidate
         if block.mining_hash != mining_hash:
-            #log.warn('mining_hash does not match')
-            gevent.spawn_later(0.5, self.mine_head_candidate)
+            log.warn('mining_hash does not match')
+            #gevent.spawn_later(0.5, self.mine_head_candidate)
             return False
-        log.info('nonce found: {}'.format(encode_hex(mining_hash)))
         block.header.mixhash = mixhash
         block.header.nonce = bin_nonce
         if self.chain.add_mined_block(block):
             log.debug('mined block %d (%s) added to chain' % (
                 block.number, encode_hex(block.hash[:8])))
-
-            # 出块成功：5秒后继续挖矿 linyize 2018.04.24
-            gevent.spawn_later(5, self.mine_head_candidate)
+            self.lastBlockTime = time.time()
             return True
         else:
             log.debug('failed to add mined block %d (%s) to chain' % (
                 block.number, encode_hex(block.hash[:8])))
-
-            # 识别：15秒后继续挖矿 linyize 2018.04.24
-            gevent.spawn_later(15, self.mine_head_candidate)
             return False
 
     def _run(self):
