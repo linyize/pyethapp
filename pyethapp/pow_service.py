@@ -145,8 +145,8 @@ class PoWService(BaseService):
         log.debug('on_mine', time=time.time())
 
         now = time.time()
-        sec = random.randint(10, 40)
-        if now - self.lastBlockTime > sec: # 收到新块通知后，延迟10-40秒出块
+        sec = random.randint(5, 20)
+        if now - self.lastBlockTime > sec: # 收到新块通知后，延迟5-20秒出块
             gevent.spawn_later(0.5, self.mine_head_candidate)
 
         gevent.spawn_later(self.mine_period, self.on_mine)
