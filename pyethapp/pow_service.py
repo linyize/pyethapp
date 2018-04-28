@@ -6,7 +6,7 @@ import gevent
 import gipc
 import random
 from devp2p.service import BaseService
-from ethereum.pow.ethpow import mine_lowcost, TT64M1
+from ethereum.pow.ethpow import mine, TT64M1
 from ethereum.slogging import get_logger
 from ethereum.utils import encode_hex
 log = get_logger('pow')
@@ -34,9 +34,9 @@ class Miner(gevent.Greenlet):
         while not self.is_stopped:
             log_sub.trace('starting mining round')
             st = time.time()
-            bin_nonce, mixhash = mine_lowcost(self.block_number, self.difficulty, self.mining_hash,
+            bin_nonce, mixhash = mine(self.block_number, self.difficulty, self.mining_hash,
                                       start_nonce=nonce, rounds=self.rounds)
-            gevent.sleep(0.5)
+            #gevent.sleep(0.5)
             elapsed = time.time() - st
             if bin_nonce:
                 log_sub.info('nonce found')
@@ -71,12 +71,12 @@ class PoWWorker(object):
         self.cpu_pct = cpu_pct
 
     def send_found_nonce(self, bin_nonce, mixhash, mining_hash):
-        #log_sub.info('sending nonce')
+        log_sub.info('sending nonce')
         self.cpipe.put(('found_nonce', dict(bin_nonce=bin_nonce, mixhash=mixhash,
                                             mining_hash=mining_hash)))
 
     def send_hashrate(self, hashrate):
-        #log_sub.trace('sending hashrate')
+        log_sub.trace('sending hashrate')
         self.cpipe.put(('hashrate', dict(hashrate=hashrate)))
 
     def recv_set_cpu_pct(self, cpu_pct):
@@ -128,10 +128,11 @@ class PoWService(BaseService):
         self.worker_process = gipc.start_process(
             target=powworker_process, args=(self.cpipe, cpu_pct))
         self.chain = app.services.chain
-        self.chain.on_new_head_cbs.append(self.on_new_head)
+        #self.chain.on_new_head_cbs.append(self.on_new_head)
+        self.chain.on_new_head_cbs.append(self.mine_head_candidate)
         self.hashrate = 0
         self.lastBlockTime = 0
-        gevent.spawn_later(self.mine_period, self.on_mine)
+        #gevent.spawn_later(self.mine_period, self.on_mine)
 
     @property
     def active(self):
@@ -175,7 +176,7 @@ class PoWService(BaseService):
         block = self.chain.head_candidate
         if block.mining_hash != mining_hash:
             log.warn('mining_hash does not match')
-            #gevent.spawn_later(0.5, self.mine_head_candidate)
+            gevent.spawn_later(0.5, self.mine_head_candidate)
             return False
         block.header.mixhash = mixhash
         block.header.nonce = bin_nonce
