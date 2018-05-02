@@ -123,10 +123,10 @@ class PoWService(BaseService):
 
     def __init__(self, app):
         super(PoWService, self).__init__(app)
-        cpu_pct = self.app.config['pow']['cpu_pct']
+        self.cpu_pct = self.app.config['pow']['cpu_pct']
         self.cpipe, self.ppipe = gipc.pipe(duplex=True)
         self.worker_process = gipc.start_process(
-            target=powworker_process, args=(self.cpipe, cpu_pct))
+            target=powworker_process, args=(self.cpipe, self.cpu_pct))
         self.chain = app.services.chain
         #self.chain.on_new_head_cbs.append(self.on_new_head)
         self.chain.on_new_head_cbs.append(self.mine_head_candidate)
@@ -163,9 +163,23 @@ class PoWService(BaseService):
             return
 
         log.debug('mining', difficulty=hc.difficulty)
-        self.ppipe.put(('mine', dict(mining_hash=hc.mining_hash,
+        try:
+            self.ppipe.put(('mine', dict(mining_hash=hc.mining_hash,
                                      block_number=hc.number,
                                      difficulty=hc.difficulty)))
+        except Exception as e:
+            # 出现pipe通信异常后，重启一个新的挖矿进程  linyize 2018.5.2
+            try:
+                self.worker_process.terminate()
+                self.cpipe.close()
+                self.ppipe.close()
+            except Exception as e:
+                pass
+
+            self.cpipe, self.ppipe = gipc.pipe(duplex=True)
+            self.worker_process = gipc.start_process(
+            target=powworker_process, args=(self.cpipe, self.cpu_pct))
+
 
     def recv_hashrate(self, hashrate):
         log.trace('hashrate updated', hashrate=hashrate)
