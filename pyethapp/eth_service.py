@@ -238,6 +238,9 @@ class ChainService(WiredService):
             self.broadcast_transaction(tx, origin=origin)  # asap
         except InvalidTransaction as e:
             log.debug('invalid tx', error=e)
+
+            # 从队列删除错误的交易 linyize 2018.5.7
+            self.transaction_queue = self.transaction_queue.diff([tx])
             return
 
         log.info('is mining?', mining=self.is_mining)
