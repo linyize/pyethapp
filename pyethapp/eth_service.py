@@ -47,6 +47,8 @@ from . import eth_protocol
 from pyethapp import sentry
 from pyethapp.dao import is_dao_challenge, build_dao_header
 
+from ethereum.state import State
+
 log = get_logger('eth.chainservice')
 
 
