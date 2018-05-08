@@ -209,6 +209,19 @@ class ChainService(WiredService):
             # Make a copy of self.transaction_queue because
             # make_head_candidate modifies it.
             txqueue = copy.deepcopy(self.transaction_queue)
+
+            # 清除交易队列 linyize 2018.5.8
+            temp_state = State.from_snapshot(self.chain.state.to_snapshot(root_only=True), self.chain.env)
+            for ordered_tx in txqueue.txs:
+                tx = ordered_tx.tx
+                try:
+                    validate_transaction(temp_state, tx)
+                except InvalidTransaction as e:
+                    log.debug('head_candidate invalid tx', error=e)
+                    self.transaction_queue = self.transaction_queue.diff([tx])
+
+            txqueue = copy.deepcopy(self.transaction_queue)
+
             self._head_candidate, self._head_candidate_state = make_head_candidate(
                 self.chain, txqueue, timestamp=int(time.time() - 1), coinbase=self.coinbase)
         return self._head_candidate
