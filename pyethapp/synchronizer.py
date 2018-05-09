@@ -266,8 +266,9 @@ class SyncTask(object):
             if bbs >= self.block_buffer_size or not blockheaders_chain:
                 for t_block in block_buffer:
                     self.chainservice.add_block(t_block, proto)  # this blocks if the queue is full
+                block_buffer = []
                 log_st.debug('block buffer cleared', size=bbs)
-            log_st.info('adding blocks done', buffer_size=len(block_buffer), took=time.time() - ts)
+            log_st.info('adding blocks done', buffer_size=bbs, took=time.time() - ts)
 
         # done
         last_block = t_block
