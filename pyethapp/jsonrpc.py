@@ -1229,7 +1229,7 @@ class Chain(Subdispatcher):
         try:
             startgas = quantity_decoder(data['gas'])
         except KeyError:
-            startgas = block.gas_limit - block.gas_used
+            startgas = prestate.gas_limit - prestate.gas_used
         try:
             gasprice = quantity_decoder(data['gasPrice'])
         except KeyError:
@@ -1255,7 +1255,7 @@ class Chain(Subdispatcher):
         tx.sender = sender
 
         try:
-            success, output = apply_transaction(test_block, tx)
+            success, output = apply_transaction(prestate, tx)
         except InvalidTransaction:
             success = False
 
