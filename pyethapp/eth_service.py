@@ -97,6 +97,7 @@ class ChainService(WiredService):
     processed_gas = 0
     processed_elapsed = 0
     process_time_queue_period = 5
+    clear_filter_period = 600
 
     def __init__(self, app):
         self.config = app.config
@@ -165,6 +166,7 @@ class ChainService(WiredService):
         self.on_new_head_cbs = []
         self.newblock_processing_times = deque(maxlen=1000)
         gevent.spawn_later(self.process_time_queue_period, self.process_time_queue)
+        gevent.spawn_later(self.clear_filter_period, self.clear_filter)
 
     @property
     def is_syncing(self):
@@ -177,6 +179,10 @@ class ChainService(WiredService):
         # if 'validator' in self.app.services:
         #     return self.app.services.validator.validating
         return False
+
+    def clear_filter(self):
+        # 10分钟清理一次广播过滤列表   linyize 2018.5.16
+        self.broadcast_filter.filter = list()
 
     def process_time_queue(self):
         try:
