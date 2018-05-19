@@ -218,6 +218,8 @@ class ChainService(WiredService):
             # make_head_candidate modifies it.
             txqueue = copy.deepcopy(self.transaction_queue)
 
+            log.debug('head_candidate before',len=len(txqueue))
+
             # 清除交易队列 linyize 2018.5.8
             temp_state = State.from_snapshot(self.chain.state.to_snapshot(root_only=True), self.chain.env)
             for ordered_tx in txqueue.txs:
@@ -229,6 +231,8 @@ class ChainService(WiredService):
                     self.transaction_queue = self.transaction_queue.diff([tx])
 
             txqueue = copy.deepcopy(self.transaction_queue)
+
+            log.debug('head_candidate after',len=len(txqueue))
 
             self._head_candidate, self._head_candidate_state = make_head_candidate(
                 self.chain, txqueue, timestamp=int(time.time() - 1), coinbase=self.coinbase)
