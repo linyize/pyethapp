@@ -1130,6 +1130,8 @@ class Chain(Subdispatcher):
                 state = State(hc.state_root, self.chain.chain.env)
                 nonce = state.get_nonce(sender)
 
+        log.info('sendTransaction', nonce=nonce)
+
         tx = Transaction(nonce, gasprice, startgas, to, value, data_, v, r, s)
         tx._sender = None
         if not signed:
