@@ -172,6 +172,11 @@ def app(ctx, profile, alt_config, config_values, alt_data_dir, log_config,
     app_config.update_config_from_genesis_json(config,
                                                genesis_json_filename_or_dict=config['eth']['genesis'])
     config['validate'] = validate
+
+    # disable pos service if validate not set.
+    if not validate:
+        config['deactivated_services'].append(ValidatorService.name)
+
     if deposit and not validate:
         raise Exception('Validate option required if deposit is included!')
     config['should_logout'] = logout
