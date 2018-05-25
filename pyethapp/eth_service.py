@@ -140,7 +140,9 @@ class ChainService(WiredService):
         # TODO: Generate an env based on the `sce['block']` and use that to create the state
         # env = Env(self.db, sce['block'])
         genesis_data = casper_utils.make_casper_genesis({}, 50, 15000, 700, 0.1, 0.0001, genesis_declaration=sce.get('genesis_data', {}), db=self.db)
-        self.chain = Chain(genesis=genesis_data, reset_genesis=False, coinbase=self.coinbase, new_head_cb=self._on_new_head, env=genesis_data.env)
+        # add validator parameter to let chain know it is pow node or pos node.
+        self.chain = Chain(genesis=genesis_data, reset_genesis=False, coinbase=self.coinbase, new_head_cb=self._on_new_head,
+                           env=genesis_data.env, validator=app.config['validator'])
         header = self.chain.state.prev_headers[0]
         log.info('chain at', number=header.number)
         if 'genesis_hash' in sce:
