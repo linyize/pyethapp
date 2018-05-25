@@ -549,6 +549,9 @@ class ChainService(WiredService):
         "receives rlp.decoded serialized"
         log.debug('----------------------------------')
         log.debug('remote_transactions_received', count=len(transactions), remote_id=proto)
+        # not store transactions for pos node.
+        if self.config['validator']:
+            return
         for tx in transactions:
             self.add_transaction(tx, origin=proto)
 
