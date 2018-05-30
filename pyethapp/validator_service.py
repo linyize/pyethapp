@@ -66,6 +66,10 @@ class ValidatorService(BaseService):
             ValidatorState.logged_out: self.check_logged_in
         }
 
+        # according to our design, validator index never change after registration.
+        # we should cache it to avoid call casper to get it for performance
+        # self.validator_indexes = -1
+
     def on_new_head(self, block):
         if self.app.services.chain.is_syncing:
             return
@@ -133,7 +137,17 @@ class ValidatorService(BaseService):
         if epoch in self.votes:
             log.debug('No vote: [NO_DBL_VOTE]', epoch=epoch, votes=self.votes.keys())
             return False
+
+        # check if my turn to vote.
         validator_index = self.get_validator_index(casper)
+        # current_reward_mark = self.get_current_reward_mark(casper)
+        # based_block_number = epoch * self.epoch_length
+        # based_block_hash = self.chain.get_blockhash_by_number(based_block_number)
+        # log.debug('Check reward mark for vote', block_hash=based_block_hash, validator_index=validator_index)
+        #
+        # if (validator_index & current_reward_mark) != (based_block_hash & current_reward_mark):
+        #     return False
+
         # Make sure we are logged in
         if not self.is_logged_in(casper, epoch, validator_index):
             raise Exception('Cannot vote: Validator not logged in!')
@@ -281,6 +295,13 @@ class ValidatorService(BaseService):
             return casper.validator_indexes(self.coinbase.address)
         except tester.TransactionFailed:
             return None
+
+    # @staticmethod
+    # def get_current_reward_mark(casper):
+    #     try:
+    #         return casper.current_reward_mark()
+    #     except tester.TransactionFailed:
+    #         return None
 
     def recommended_vote_contents(self, casper, validator_index):
         current_epoch = casper.current_epoch()
