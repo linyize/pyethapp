@@ -174,8 +174,8 @@ def app(ctx, profile, alt_config, config_values, alt_data_dir, log_config,
     config['validate'] = validate
 
     # disable pos service if validate not set.
-    if not validate:
-        config['deactivated_services'].append(ValidatorService.name)
+    # if not validate:
+    #     config['deactivated_services'].append(ValidatorService.name)
 
     if deposit and not validate:
         raise Exception('Validate option required if deposit is included!')
