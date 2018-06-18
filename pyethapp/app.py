@@ -65,16 +65,15 @@ class EthApp(BaseApp):
     script_globals = {}
 
 
-# TODO: Remove `profile` fallbacks in 1.4 or so
 # Separators should be underscore!
 @click.group(help='Welcome to {} {}'.format(EthApp.client_name, EthApp.client_version))
-@click.option('--profile', type=FallbackChoice(
-                  list(PROFILES.keys()),
-                  {'frontier': 'livenet', 'morden': 'testnet'},
-                  "PyEthApp's configuration profiles have been renamed to "
-                  "'livenet' and 'testnet'. The previous values 'frontier' and "
-                  "'morden' will be removed in a future update."),
-              default=DEFAULT_PROFILE, help="Configuration profile.", show_default=True)
+# @click.option('--profile', type=FallbackChoice(
+#                   list(PROFILES.keys()),
+#                   {'frontier': 'livenet', 'morden': 'testnet'},
+#                   "PyEthApp's configuration profiles have been renamed to "
+#                   "'livenet' and 'testnet'. The previous values 'frontier' and "
+#                   "'morden' will be removed in a future update."),
+#               default=DEFAULT_PROFILE, help="Configuration profile.", show_default=True)
 @click.option('alt_config', '--Config', '-C', type=str, callback=app_config.validate_alt_config_file,
               help='Alternative config file')
 @click.option('config_values', '-c', multiple=True, type=str,
@@ -101,7 +100,7 @@ class EthApp(BaseApp):
               help='Unlock an account (prompts for password)')
 @click.option('--password', type=click.File(), help='path to a password file')
 @click.pass_context
-def app(ctx, profile, alt_config, config_values, alt_data_dir, log_config,
+def app(ctx, alt_config, config_values, alt_data_dir, log_config,
         bootstrap_node, log_json, validate, deposit, logout, mining_pct, unlock, password, log_file):
     # configure logging
     slogging.configure(log_config, log_json=log_json, log_file=log_file)
@@ -124,34 +123,35 @@ def app(ctx, profile, alt_config, config_values, alt_data_dir, log_config,
     config['data_dir'] = data_dir
 
     # Store custom genesis to restore if overridden by profile value
-    genesis_from_config_file = config.get('eth', {}).get('genesis')
-
-    # Store custom network_id to restore if overridden by profile value
-    network_id_from_config_file = config.get('eth', {}).get('network_id')
-
-    # Store custom bootstrap_nodes to restore them overridden by profile value
-    bootstrap_nodes_from_config_file = config.get('discovery', {}).get('bootstrap_nodes')
+    # genesis_from_config_file = config.get('eth', {}).get('genesis')
+    #
+    # # Store custom network_id to restore if overridden by profile value
+    # network_id_from_config_file = config.get('eth', {}).get('network_id')
+    #
+    # # Store custom bootstrap_nodes to restore them overridden by profile value
+    # bootstrap_nodes_from_config_file = config.get('discovery', {}).get('bootstrap_nodes')
 
     # add default config
     app_config.update_config_with_defaults(config, app_config.get_default_config([EthApp] + services))
     app_config.update_config_with_defaults(config, {'eth': {'block': eth_config.default_config}})
 
     # Set config values based on profile selection
-    merge_dict(config, PROFILES[profile])
+    # For our case, we never link to real live ethereum network. just use genesis we provide.
+    # merge_dict(config, PROFILES[profile])
 
-    if genesis_from_config_file:
-        # Fixed genesis_hash taken from profile must be deleted as custom genesis loaded
-        del config['eth']['genesis_hash']
-        config['eth']['genesis'] = genesis_from_config_file
-
-    if network_id_from_config_file:
-        del config['eth']['network_id']
-        config['eth']['network_id'] = network_id_from_config_file
-
-    if bootstrap_nodes_from_config_file:
-        # Fixed bootstrap_nodes taken from profile must be deleted as custom bootstrap_nodes loaded
-        del config['discovery']['bootstrap_nodes']
-        config['discovery']['bootstrap_nodes'] = bootstrap_nodes_from_config_file
+    # if genesis_from_config_file:
+    #     # Fixed genesis_hash taken from profile must be deleted as custom genesis loaded
+    #     del config['eth']['genesis_hash']
+    #     config['eth']['genesis'] = genesis_from_config_file
+    #
+    # if network_id_from_config_file:
+    #     del config['eth']['network_id']
+    #     config['eth']['network_id'] = network_id_from_config_file
+    #
+    # if bootstrap_nodes_from_config_file:
+    #     # Fixed bootstrap_nodes taken from profile must be deleted as custom bootstrap_nodes loaded
+    #     del config['discovery']['bootstrap_nodes']
+    #     config['discovery']['bootstrap_nodes'] = bootstrap_nodes_from_config_file
 
     pre_cmd_line_config_genesis = config.get('eth', {}).get('genesis')
     # override values with values from cmd line
