@@ -265,6 +265,10 @@ class ChainService(WiredService):
         log.info('print current transaction queue:', length=len(self.transaction_queue))
         log.info('current _head_candidate_needs_updating:', need_update=self._head_candidate_needs_updating)
         # before validate transaction, head candidate must be updated if anything new.
+        log.info('old head state record nonce is:', nonce=self._head_candidate_state.get_nonce(tx.sender))
+        if self._head_candidate_needs_updating:
+            _ = self.head_candidate
+            log.info('after update nonce ', nonce=self._head_candidate_state.get_nonce(tx.sender))
 
         # validate transaction
         try:
