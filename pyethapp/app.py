@@ -45,7 +45,7 @@ from pyethapp import __version__
 from pyethapp.profiles import PROFILES, DEFAULT_PROFILE
 from pyethapp.utils import merge_dict, load_contrib_services, FallbackChoice, \
                            enable_greenlet_debugger
-
+from enum import Enum
 
 log = slogging.get_logger('app')
 
@@ -64,6 +64,12 @@ class EthApp(BaseApp):
     default_config['post_app_start_callback'] = None
     script_globals = {}
 
+
+# define node type because different behavior for different node.
+class NodeType(Enum):
+    boot = 0
+    pow = 1
+    pos = 2
 
 # Separators should be underscore!
 @click.group(help='Welcome to {} {}'.format(EthApp.client_name, EthApp.client_version))
@@ -172,6 +178,8 @@ def app(ctx, alt_config, config_values, alt_data_dir, log_config,
     app_config.update_config_from_genesis_json(config,
                                                genesis_json_filename_or_dict=config['eth']['genesis'])
     config['validate'] = validate
+    # set boot as default one.
+    config['node_type'] = NodeType.boot
 
     # disable pos service if validate not set.
     # if not validate:
@@ -182,6 +190,7 @@ def app(ctx, alt_config, config_values, alt_data_dir, log_config,
     config['should_logout'] = logout
     if deposit:
         config['deposit_size'] = deposit * 10**18
+        config['node_type'] = NodeType.pos
     else:
         config['deposit_size'] = None
     if bootstrap_node:
@@ -190,6 +199,8 @@ def app(ctx, alt_config, config_values, alt_data_dir, log_config,
     if mining_pct > 0:
         config['pow']['activated'] = True
         config['pow']['cpu_pct'] = int(min(100, mining_pct))
+        config['node_type'] = NodeType.pow
+
     if not config.get('pow', {}).get('activated'):
         config['deactivated_services'].append(PoWService.name)
 
