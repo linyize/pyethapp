@@ -28,7 +28,7 @@ from ethereum.hybrid_casper.consensus import initialize, check_pow
 from ethereum.config import Env
 from ethereum.genesis_helpers import mk_genesis_data
 from ethereum import config as ethereum_config
-from ethereum.messages import apply_transaction, validate_transaction
+from ethereum.messages import apply_transaction, validate_transaction_without_state
 from ethereum.transaction_queue import TransactionQueue
 from ethereum.experimental.refcount_db import RefcountDB
 from ethereum.slogging import get_logger
@@ -48,6 +48,7 @@ from pyethapp import sentry
 from pyethapp.dao import is_dao_challenge, build_dao_header
 
 from ethereum.state import State
+from pyethapp.app import NodeType
 
 log = get_logger('eth.chainservice')
 
@@ -74,7 +75,6 @@ class DuplicatesFilter(object):
 
 
 class ChainService(WiredService):
-
     """
     Manages the chain and requests to it.
     """
@@ -139,9 +139,11 @@ class ChainService(WiredService):
         self.coinbase = app.services.accounts.coinbase
         # TODO: Generate an env based on the `sce['block']` and use that to create the state
         # env = Env(self.db, sce['block'])
-        genesis_data = casper_utils.make_casper_genesis({}, 50, 15000, 700, 0.1, 0.0001, genesis_declaration=sce.get('genesis_data', {}), db=self.db)
+        genesis_data = casper_utils.make_casper_genesis({}, 50, 15000, 700, 0.1, 0.0001,
+                                                        genesis_declaration=sce.get('genesis_data', {}), db=self.db)
         # add validator parameter to let chain know it is pow node or pos node.
-        self.chain = Chain(genesis=genesis_data, reset_genesis=False, coinbase=self.coinbase, new_head_cb=self._on_new_head,
+        self.chain = Chain(genesis=genesis_data, reset_genesis=False, coinbase=self.coinbase,
+                           new_head_cb=self._on_new_head,
                            env=genesis_data.env, validator=app.config['validator'])
         header = self.chain.state.prev_headers[0]
         log.info('chain at', number=header.number)
@@ -160,8 +162,8 @@ class ChainService(WiredService):
         self._head_candidate_needs_updating = True
         # Initialize a new head candidate.
         _ = self.head_candidate
-        #self.min_gasprice = 100 * 10**9 # TODO: better be an option to validator service?
-        self.min_gasprice = 10**9
+        # self.min_gasprice = 100 * 10**9 # TODO: better be an option to validator service?
+        self.min_gasprice = 10 ** 9
         self.add_blocks_lock = False
         self.add_transaction_lock = gevent.lock.Semaphore()
         self.broadcast_filter = DuplicatesFilter()
@@ -261,35 +263,34 @@ class ChainService(WiredService):
             log.debug('discarding known tx')  # discard early
             return
 
-        log.info('compare nonce local state and tx:', nonce=self.chain.state.get_nonce(tx.sender), txNonce=tx.nonce)
-        log.info('print current transaction queue:', length=len(self.transaction_queue))
-        log.info('current _head_candidate_needs_updating:', need_update=self._head_candidate_needs_updating)
+        log.debug('compare nonce local state and tx:', nonce=self.chain.state.get_nonce(tx.sender), txNonce=tx.nonce)
+        log.debug('print current transaction queue:', length=len(self.transaction_queue))
+        log.debug('current _head_candidate_needs_updating:', need_update=self._head_candidate_needs_updating)
         # before validate transaction, head candidate must be updated if anything new.
-        log.info('old head state record nonce is:', nonce=self._head_candidate_state.get_nonce(tx.sender))
+        log.debug('old head state record nonce is:', nonce=self._head_candidate_state.get_nonce(tx.sender))
         if self._head_candidate_needs_updating:
             _ = self.head_candidate
-            log.info('after update nonce ', nonce=self._head_candidate_state.get_nonce(tx.sender))
+            log.debug('after update nonce ', nonce=self._head_candidate_state.get_nonce(tx.sender))
 
         # validate transaction
         try:
             # Transaction validation for broadcasting. Transaction is validated
             # against the current head candidate.
-            validate_transaction(self._head_candidate_state, tx)
+            validate_transaction_without_state(tx)
 
             log.debug('valid tx, broadcasting')
             self.broadcast_transaction(tx, origin=origin)  # asap
         except InvalidTransaction as e:
             log.debug('invalid tx', error=e)
-
-            # 从队列删除错误的交易 linyize 2018.5.7
-            # self.transaction_queue = self.transaction_queue.diff([tx])
             return
 
         log.info('is mining?', mining=self.is_mining)
-        if origin is not None:  # not locally added via jsonrpc
-            if not self.is_mining or self.is_syncing:
-                log.debug('discarding tx', syncing=self.is_syncing, mining=self.is_mining)
-                return
+        if self.app.config['node_type'] == NodeType.boot:
+            log.debug('boot not save transaction to queue.')
+            return
+        if self.app.config['node_type'] == NodeType.pos and origin is not None:
+            log.debug('pos not save transaction to queue except sent from json rpc.')
+            return
 
         casper_contract = tx.to == self.chain.state.env.config['CASPER_ADDRESS']
         vote = tx.data[0:4] == b'\xe9\xdc\x06\x14'
@@ -364,9 +365,9 @@ class ChainService(WiredService):
                     log.warn('invalid transaction', block=t_block, error=e, FIXME='ban node')
                     errtype = \
                         'InvalidNonce' if isinstance(e, InvalidNonce) else \
-                        'NotEnoughCash' if isinstance(e, InsufficientBalance) else \
-                        'OutOfGasBase' if isinstance(e, InsufficientStartGas) else \
-                        'other_transaction_error'
+                            'NotEnoughCash' if isinstance(e, InsufficientBalance) else \
+                                'OutOfGasBase' if isinstance(e, InsufficientStartGas) else \
+                                    'other_transaction_error'
                     sentry.warn_invalid(t_block, errtype)
                     self.block_queue.get()
                     continue
@@ -457,7 +458,7 @@ class ChainService(WiredService):
 
             if hash_mode:  # hash traversal
                 if reverse:
-                    for i in range(skip+1):
+                    for i in range(skip + 1):
                         try:
                             block = self.chain.get_block(origin_hash)
                             if block:
@@ -472,7 +473,7 @@ class ChainService(WiredService):
                     blockhash = self.chain.get_blockhash_by_number(origin.number + skip + 1)
                     try:
                         # block = self.chain.get_block(blockhash)
-                        if block and self.chain.get_blockhashes_from_hash(blockhash, skip+1)[skip] == origin_hash:
+                        if block and self.chain.get_blockhashes_from_hash(blockhash, skip + 1)[skip] == origin_hash:
                             origin_hash = blockhash
                         else:
                             unknown = True
@@ -588,7 +589,7 @@ class ChainService(WiredService):
         if hash_mode:
             origin_hash = hash_or_number[0]
         else:
-            #if is_dao_challenge(self.config['eth']['block'], hash_or_number[1], amount, skip):
+            # if is_dao_challenge(self.config['eth']['block'], hash_or_number[1], amount, skip):
             #    log.debug("sending: answer DAO challenge")
             #    headers.append(build_dao_header(self.config['eth']['block']))
             #    proto.send_blockheaders(*headers)
@@ -649,3 +650,6 @@ class ChainService(WiredService):
         log.debug('----------------------------------')
         log.debug("recv newblock", block=block, remote_id=proto)
         self.synchronizer.receive_newblock(proto, block, chain_difficulty)
+
+
+

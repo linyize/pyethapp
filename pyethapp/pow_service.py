@@ -169,6 +169,7 @@ class PoWService(BaseService):
                                      difficulty=hc.difficulty)))
         except Exception as e:
             # 出现pipe通信异常后，重启一个新的挖矿进程  linyize 2018.5.2
+            log.info('mine_head_candidate pipe between pow server and worker broken.')
             try:
                 self.worker_process.terminate()
                 self.cpipe.close()
