@@ -42,7 +42,6 @@ from .jsonrpc import JSONRPCServer, IPCRPCServer
 from .pow_service import PoWService
 from .validator_service import ValidatorService
 from pyethapp import __version__
-from pyethapp.profiles import PROFILES, DEFAULT_PROFILE
 from pyethapp.utils import merge_dict, load_contrib_services, FallbackChoice, \
                            enable_greenlet_debugger
 from pyethapp.node_type import NodeType
