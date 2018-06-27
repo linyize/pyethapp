@@ -219,7 +219,10 @@ class ChainService(WiredService):
 
     @property
     def head_candidate(self):
-        txqueue = copy.deepcopy(self.transaction_queue).sort()
+        log.debug('head_candidate tx queue:',length=len(self.transaction_queue))
+        txqueue = copy.deepcopy(self.transaction_queue)
+        txqueue.sort()
+        log.debug('head_candidate sorted tx queue:', length=len(txqueue))
         self._head_candidate, self._head_candidate_state = make_head_candidate(
                 self.chain, txqueue, timestamp=int(time.time() - 1), coinbase=self.coinbase)
         return self._head_candidate
@@ -269,7 +272,7 @@ class ChainService(WiredService):
         null_sender = tx.sender == b'\xff' * 20
         if tx.gasprice >= self.min_gasprice or (casper_contract and vote and null_sender):
             self.add_transaction_lock.acquire()
-            self.transaction_queue.add_transaction(tx, force=force)
+            self.transaction_queue.add_transaction(tx)
             self._head_candidate_needs_updating = True
             self.add_transaction_lock.release()
         else:
