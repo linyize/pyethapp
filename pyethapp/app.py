@@ -45,7 +45,7 @@ from pyethapp import __version__
 from pyethapp.profiles import PROFILES, DEFAULT_PROFILE
 from pyethapp.utils import merge_dict, load_contrib_services, FallbackChoice, \
                            enable_greenlet_debugger
-from enum import Enum
+from pyethapp.node_type import NodeType
 
 log = slogging.get_logger('app')
 
@@ -64,12 +64,6 @@ class EthApp(BaseApp):
     default_config['post_app_start_callback'] = None
     script_globals = {}
 
-
-# define node type because different behavior for different node.
-class NodeType(Enum):
-    boot = 0
-    pow = 1
-    pos = 2
 
 # Separators should be underscore!
 @click.group(help='Welcome to {} {}'.format(EthApp.client_name, EthApp.client_version))
