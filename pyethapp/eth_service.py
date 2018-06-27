@@ -160,6 +160,9 @@ class ChainService(WiredService):
         # head candidate to be updated.
         self.transaction_queue = TransactionQueue()
         self._head_candidate_needs_updating = True
+        self._head_candidate = None
+        self._head_candidate_state = None
+
         # Initialize a new head candidate.
         _ = self.head_candidate
         # self.min_gasprice = 100 * 10**9 # TODO: better be an option to validator service?
@@ -170,7 +173,7 @@ class ChainService(WiredService):
         self.on_new_head_cbs = []
         self.newblock_processing_times = deque(maxlen=1000)
         gevent.spawn_later(self.process_time_queue_period, self.process_time_queue)
-        gevent.spawn_later(self.clear_filter_period, self.clear_filter)
+        # gevent.spawn_later(self.clear_filter_period, self.clear_filter)
 
     @property
     def is_syncing(self):
@@ -184,9 +187,9 @@ class ChainService(WiredService):
         #     return self.app.services.validator.validating
         return False
 
-    def clear_filter(self):
-        # 10分钟清理一次广播过滤列表   linyize 2018.5.16
-        self.broadcast_filter.filter = list()
+    # def clear_filter(self):
+    #     # 10分钟清理一次广播过滤列表   linyize 2018.5.16
+    #     self.broadcast_filter.filter = list()
 
     def process_time_queue(self):
         try:
@@ -216,35 +219,8 @@ class ChainService(WiredService):
 
     @property
     def head_candidate(self):
-        if self._head_candidate_needs_updating:
-            self._head_candidate_needs_updating = False
-            # Make a copy of self.transaction_queue because
-            # make_head_candidate modifies it.
-            txqueue = copy.deepcopy(self.transaction_queue)
-
-            # log.debug('head_candidate before',len=len(txqueue))
-            #
-            # # 清除交易队列 linyize 2018.5.8
-            # temp_state = State.from_snapshot(self.chain.state.to_snapshot(root_only=True), self.chain.env)
-            # bad_addresses = []
-            # for ordered_tx in txqueue.txs:
-            #     tx = ordered_tx.tx
-            #     try:
-            #         validate_transaction(temp_state, tx)
-            #     except InvalidTransaction as e:
-            #         log.debug('head_candidate invalid tx', error=e)
-            #         bad_addresses.append(tx.sender)
-            #
-            # # 清除队列中相同账户的交易
-            # for ordered_tx in txqueue.txs:
-            #     if ordered_tx.tx.sender in bad_addresses:
-            #         self.transaction_queue = self.transaction_queue.diff([ordered_tx.tx])
-            #
-            # txqueue = copy.deepcopy(self.transaction_queue)
-            #
-            # log.debug('head_candidate after',len=len(txqueue))
-
-            self._head_candidate, self._head_candidate_state = make_head_candidate(
+        txqueue = copy.deepcopy(self.transaction_queue).sort()
+        self._head_candidate, self._head_candidate_state = make_head_candidate(
                 self.chain, txqueue, timestamp=int(time.time() - 1), coinbase=self.coinbase)
         return self._head_candidate
 
@@ -268,11 +244,7 @@ class ChainService(WiredService):
         log.debug('current _head_candidate_needs_updating:', need_update=self._head_candidate_needs_updating)
         # before validate transaction, head candidate must be updated if anything new.
         log.debug('old head state record nonce is:', nonce=self._head_candidate_state.get_nonce(tx.sender))
-        if self._head_candidate_needs_updating:
-            _ = self.head_candidate
-            log.debug('after update nonce ', nonce=self._head_candidate_state.get_nonce(tx.sender))
 
-        # validate transaction
         try:
             # Transaction validation for broadcasting. Transaction is validated
             # against the current head candidate.
