@@ -194,6 +194,9 @@ def app(ctx, alt_config, config_values, alt_data_dir, log_config,
         config['pow']['cpu_pct'] = int(min(100, mining_pct))
         config['node_type'] = NodeType.pow
 
+    # TODO set the pow mining threshold in configure file.
+    config['pow_mining_threshold'] = 0
+
     if not config.get('pow', {}).get('activated'):
         config['deactivated_services'].append(PoWService.name)
 

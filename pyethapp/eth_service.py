@@ -281,6 +281,11 @@ class ChainService(WiredService):
             log.info("too low gasprice, ignore", tx=encode_hex(tx.hash)[:8], gasprice=tx.gasprice)
 
     def check_header(self, header):
+        # check the coinbase 's eth at first.
+        balance = self.chain.state.get_balance(header.coinbase)
+        if balance < self.app.config['pow_mining_threshold']:
+            log.info('the pow that mined the new block no enough eth.')
+            return False
         return check_pow(self.chain.state, header)
 
     def add_block(self, t_block, proto):
