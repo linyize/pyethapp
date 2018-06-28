@@ -219,12 +219,14 @@ class ChainService(WiredService):
 
     @property
     def head_candidate(self):
-        log.debug('head_candidate tx queue:',length=len(self.transaction_queue))
-        txqueue = copy.deepcopy(self.transaction_queue)
-        txqueue.sort()
-        log.debug('head_candidate sorted tx queue:', length=len(txqueue))
-        self._head_candidate, self._head_candidate_state = make_head_candidate(
-                self.chain, txqueue, timestamp=int(time.time() - 1), coinbase=self.coinbase)
+        if self._head_candidate_needs_updating:
+            self._head_candidate_needs_updating = False
+            log.debug('head_candidate tx queue:', length=len(self.transaction_queue))
+            txqueue = copy.deepcopy(self.transaction_queue)
+            txqueue.sort()
+            log.debug('head_candidate sorted tx queue:', length=len(txqueue))
+            self._head_candidate, self._head_candidate_state = make_head_candidate(
+                    self.chain, txqueue, timestamp=int(time.time() - 1), coinbase=self.coinbase)
         return self._head_candidate
 
     def add_transaction(self, tx, origin=None, force_broadcast=False, force=False):
@@ -523,10 +525,10 @@ class ChainService(WiredService):
         transactions = self.transaction_queue.peek()
         if transactions:
             log.debug("sending transactions", remote_id=proto)
-            txs = []
-            for tx in transactions:
-                txs.append(tx.tx)
-            proto.send_transactions(*txs)
+            # txs = []
+            # for tx in transactions:
+            #     txs.append(tx.tx)
+            proto.send_transactions(*transactions)
 
     # transactions
 
