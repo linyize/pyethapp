@@ -78,6 +78,7 @@ class LevelDB(BaseDB):
         self.dbfile = dbfile
         self.db = leveldb.LevelDB(dbfile, max_open_files=self.max_open_files)
         self.commit_counter = 0
+        self.repair_times = 0
 
     def reopen(self):
         del self.db
@@ -138,6 +139,11 @@ class LevelDB(BaseDB):
             return False
         except Exception as e:
             log.info('key: {}, type(key):{}'.format(key, type(key)))
+            # try to repair db when sth wrong. just do one time.
+            if self.repair_times == 0:
+                leveldb.RepairDB(self.dbfile)
+                self.repair_times += 1
+                return False
             raise
 
     def __contains__(self, key):
